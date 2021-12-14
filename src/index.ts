@@ -33,29 +33,33 @@ cron.schedule('*/1 * * * *', async () => {
     const formattedTime =
         time.getMonth() + 1 + '-' + time.getDate() + '-' + time.getFullYear();
 
-    const request = await axios.get(url, {
-        headers: {
-            Referer: 'http://www.sitepoint.com',
-            'X-Requested-With': 'XMLHttpRequest',
-        },
-    });
-    await saveData(request.data, formattedTime);
-    fs.readFile(
-        `queue/${formattedTime}-nics.html`,
-        { encoding: 'utf8' },
-        (err, data) => {
-            if (err) {
-                return console.error(err);
-            }
-            const dom = new JSDOM.JSDOM(data);
-            const message =
-                dom.window.document.querySelector(
-                    'div.message-group',
-                ).innerHTML;
+    let exists = false;
+    fs.readFile(`queue/${formattedTime}-nics.html`, async (err) => {
+        if (err) {
+            exists = true;
+            console.error(err);
+        }
+        if (exists) {
+            const request = await axios.get(url);
+            await saveData(request.data, formattedTime);
+            fs.readFile(
+                `queue/${formattedTime}-nics.html`,
+                { encoding: 'utf8' },
+                (error, data) => {
+                    if (error) {
+                        return console.error(error);
+                    }
+                    const dom = new JSDOM.JSDOM(data);
+                    const message =
+                        dom.window.document.querySelector(
+                            'div.message-group',
+                        ).innerHTML;
 
-            embedMessage(message, channel);
-        },
-    );
+                    embedMessage(message, channel);
+                },
+            );
+        }
+    });
 });
 
 /**
