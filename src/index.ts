@@ -23,8 +23,8 @@ client.once('shardReconnecting', (id) => {
 client.once('shardDisconnect', (event, shardID) => {
     console.log(`Disconnected from event ${event} with ID ${shardID}`);
 });
-// 10 8 * * 1-6
-cron.schedule('* * * * 1-6', async () => {
+// 10 8 * * 1-6 -> Run every day at 8:30am Monday-Saturday
+cron.schedule('30 8 * * 1-6', async () => {
     const webhookURL = process.env.WEBHOOKURL;
 
     const time = new Date();
@@ -42,7 +42,7 @@ cron.schedule('* * * * 1-6', async () => {
         time.getMinutes() - 10 >= 0
             ? time.getMinutes()
             : '0' + time.getMinutes();
-    const amOrPm = time.getHours() > 12 ? 'am' : 'pm';
+    const amOrPm = time.getHours() >= 12 ? 'pm' : 'am';
     const hours =
         time.getHours() - 12 > 0 ? time.getHours() - 12 : time.getHours();
     const fetchedTime = `${hours}:${timeMinute} ${amOrPm}`;
@@ -68,7 +68,7 @@ cron.schedule('* * * * 1-6', async () => {
 });
 
 /**
- * Saves NJNics portal page
+ * Saves html of NJNics portal page
  * @param {string} data HTML file retrieved from NJNics
  * @param {string} time Current date object
  */
