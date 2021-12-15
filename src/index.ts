@@ -1,4 +1,4 @@
-import { Client, Intents, TextChannel, MessageEmbed } from 'discord.js';
+import { Client, Intents, MessageEmbed } from 'discord.js';
 import * as env from 'dotenv';
 import cron from 'node-cron';
 import axios from 'axios';
@@ -23,43 +23,38 @@ client.once('shardReconnecting', (id) => {
 client.once('shardDisconnect', (event, shardID) => {
     console.log(`Disconnected from event ${event} with ID ${shardID}`);
 });
-
-cron.schedule('*/1 * * * *', async () => {
-    const channel = (await client.channels.fetch(
-        process.env.CHID,
-    )) as TextChannel;
+cron.schedule('* * * * 1-6', async () => {
+    const webhookURL = process.env.WEBHOOKURL;
 
     const time = new Date();
     const formattedTime =
-        time.getMonth() + 1 + '-' + time.getDate() + '-' + time.getFullYear();
+        time.getMonth() +
+        1 +
+        '-' +
+        time.getDate() +
+        '-' +
+        time.getFullYear() +
+        '-' +
+        time.getHours();
 
-    let exists = false;
-    fs.readFile(`queue/${formattedTime}-nics.html`, async (err) => {
-        if (err) {
-            exists = true;
-            console.error(err);
-        }
-        if (exists) {
-            const request = await axios.get(url);
-            await saveData(request.data, formattedTime);
-            fs.readFile(
-                `queue/${formattedTime}-nics.html`,
-                { encoding: 'utf8' },
-                (error, data) => {
-                    if (error) {
-                        return console.error(error);
-                    }
-                    const dom = new JSDOM.JSDOM(data);
-                    const message =
-                        dom.window.document.querySelector(
-                            'div.message-group',
-                        ).innerHTML;
+    const request = await axios.get(url);
+    await saveData(request.data, formattedTime);
+    fs.readFile(
+        `queue/${formattedTime}-nics.html`,
+        { encoding: 'utf8' },
+        (error, data) => {
+            if (error) {
+                return console.error(error);
+            }
+            const dom = new JSDOM.JSDOM(data);
+            const message =
+                dom.window.document.querySelector(
+                    'div.message-group',
+                ).innerHTML;
 
-                    embedMessage(message, channel);
-                },
-            );
-        }
-    });
+            embedMessage(message, webhookURL);
+        },
+    );
 });
 
 /**
@@ -82,29 +77,22 @@ async function saveData(data: string, time: string) {
 
 /**
  * Sends embedded message to channel
- * @param {string} message
- * @param {TextChannel} channel
+ * @param {string} message message to post to channel
+ * @param {string} webHookURL webhook url
  */
-async function embedMessage(message: string, channel: TextChannel) {
+async function embedMessage(message: string, webHookURL: string) {
     const embed = new MessageEmbed();
     embed.setTitle('NJ NICS Queue');
     embed.setURL(url);
 
-    // const submissions = message.match('\\d+ submissions');
-    // const workingOn = message.match('We are.*work.');
-    // const time = message.match('.*?[2][0][2][0-9]');
-    /*   embed.addFields(
-        {
-            name: 'Working On',
-            value: workingOn[0],
-            inline: true,
-        },
-    ); */
-    embed.setDescription(message);
-    // embed.setFooter(time[0]);
-    embed.setColor('DARK_AQUA');
+    const time = message.match('.*?[2][0][2][0-9]');
 
-    channel.send({ content: ' ', embeds: [embed] });
+    embed.setDescription(message);
+    embed.setFooter(time[0]);
+    embed.setColor('#ffd81e');
+
+    const body = { content: '', embeds: [embed] };
+    await axios.post(webHookURL, body);
 }
 
 client.login(process.env.DISCORD_TOKEN);
