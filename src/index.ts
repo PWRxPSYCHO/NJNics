@@ -8,6 +8,8 @@ import JSDOM from 'jsdom';
 env.config();
 
 const url = 'https://www.njportal.com/NJSP/NicsVerification';
+const minuteInterval = 10;
+const hourInterval = 4;
 const client = new Client({
     intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
 });
@@ -23,10 +25,8 @@ client.once('shardReconnecting', (id) => {
 client.once('shardDisconnect', (event, shardID) => {
     console.log(`Disconnected from event ${event} with ID ${shardID}`);
 });
-// 10 8 * * 1-6 -> Run every day at 8:30am Monday-Saturday
-cron.schedule('30 8 * * 1-6', async () => {
-    const webhookURL = process.env.WEBHOOKURL;
-
+// At every 10th minute past every 4th hour from 8 through 16 on every day-of-week from Monday through Saturday.
+cron.schedule(`*/${minuteInterval} 8-16/${hourInterval}  * * 1-6`, async () => {
     const time = new Date();
     const formattedTime =
         time.getMonth() +
@@ -36,7 +36,9 @@ cron.schedule('30 8 * * 1-6', async () => {
         '-' +
         time.getFullYear() +
         '-' +
-        time.getHours();
+        time.getHours() +
+        '-' +
+        time.getMinutes();
 
     const timeMinute =
         time.getMinutes() - 10 >= 0
@@ -58,11 +60,12 @@ cron.schedule('30 8 * * 1-6', async () => {
             }
             const dom = new JSDOM.JSDOM(data);
             const message =
-                dom.window.document.querySelector(
-                    'div.message-group',
-                ).innerHTML;
+                dom.window.document.querySelector('div.message-group');
 
-            embedMessage(message, webhookURL, fetchedTime);
+            if (message !== null) {
+                const msg = message.innerHTML;
+                verifyChanges(msg, fetchedTime);
+            }
         },
     );
 });
@@ -100,25 +103,74 @@ async function embedMessage(
     embed.setTitle('NJ NICS Queue');
     embed.setURL(url);
 
-    if (message.length > 0) {
-        // const time = message.match('.*?[2][0][2][0-9]');
+    // const time = message.match('.*?[2][0][2][0-9]');
 
-        embed.setDescription(message);
-        embed.setFooter(`Fetched at: ${fetchedTime}`);
-        embed.setColor('#ffd81e');
+    embed.setDescription(message);
+    embed.setFooter(`Fetched at: ${fetchedTime}`);
+    embed.setColor('#ffd81e');
 
-        const body = {
-            content: '',
-            embeds: [embed],
-            avatar_url:
-                'https://www.njportal.com/NJSP/NicsVerification/Images/logo.png',
-        };
-        await axios.post(webHookURL, body);
-    } else {
-        embed.setDescription('No updates today');
-        const body = { content: '', embeds: [embed] };
-        await axios.post(webHookURL, body);
-    }
+    const body = {
+        content: '',
+        embeds: [embed],
+    };
+    await axios.post(webHookURL, body);
+}
+
+/**
+ * @return {boolean} determines if queue has changed
+ * @param {string} message NICS Queue message
+ * @param {string} fetchedTime when the update was fetched
+ */
+async function verifyChanges(
+    message: string,
+    fetchedTime: string,
+): Promise<void> {
+    const time = new Date();
+
+    // Determines if it is at the beginnning of the 4 hour interval (Otherwise get previous page)
+    const hours =
+        time.getHours() / hourInterval == 2
+            ? time.getHours()
+            : time.getHours() - hourInterval;
+
+    // Determines if it is at the beginning of the 10 min interval (Otherwise get previous page)
+    const minutes =
+        time.getMinutes() - minuteInterval > 0
+            ? time.getMinutes() - minuteInterval
+            : time.getMinutes();
+
+    const formattedTime =
+        time.getMonth() +
+        1 +
+        '-' +
+        time.getDate() +
+        '-' +
+        time.getFullYear() +
+        '-' +
+        hours +
+        '-' +
+        minutes;
+
+    fs.readFile(
+        `queue/${formattedTime}-nics.html`,
+        { encoding: 'utf8' },
+        (error, data) => {
+            if (error) {
+                return console.error(error);
+            }
+            const dom = new JSDOM.JSDOM(data);
+            const msg = dom.window.document.querySelector('div.message-group');
+            if (message !== null && msg !== null) {
+                const nics = msg.innerHTML;
+                console.log(nics === message);
+                if (nics === message) {
+                    return;
+                } else {
+                    embedMessage(message, process.env.WEBHOOKURL, fetchedTime);
+                }
+            }
+        },
+    );
 }
 
 client.login(process.env.DISCORD_TOKEN);
