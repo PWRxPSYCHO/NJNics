@@ -135,7 +135,7 @@ async function verifyChanges(
 
     // Determines if it is at the beginning of the 10 min interval (Otherwise get previous page)
     const minutes =
-        time.getMinutes() - minuteInterval > 0
+        time.getMinutes() - minuteInterval >= 0
             ? time.getMinutes() - minuteInterval
             : time.getMinutes();
 
@@ -160,14 +160,15 @@ async function verifyChanges(
             }
             const dom = new JSDOM.JSDOM(data);
             const msg = dom.window.document.querySelector('div.message-group');
-            if (message !== null && msg !== null) {
+            if (msg !== null) {
                 const nics = msg.innerHTML;
-                console.log(nics === message);
                 if (nics === message) {
                     return;
                 } else {
                     embedMessage(message, process.env.WEBHOOKURL, fetchedTime);
                 }
+            } else if (message !== null) {
+                embedMessage(message, process.env.WEBHOOKURL, fetchedTime);
             }
         },
     );
