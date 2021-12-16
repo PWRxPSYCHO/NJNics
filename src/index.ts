@@ -9,7 +9,7 @@ env.config();
 
 const url = 'https://www.njportal.com/NJSP/NicsVerification';
 const minuteInterval = 10;
-const hourInterval = 4;
+const hourInterval = 1;
 const client = new Client({
     intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
 });
@@ -25,8 +25,8 @@ client.once('shardReconnecting', (id) => {
 client.once('shardDisconnect', (event, shardID) => {
     console.log(`Disconnected from event ${event} with ID ${shardID}`);
 });
-// At every 10th minute past every 4th hour from 8 through 16 on every day-of-week from Monday through Saturday.
-cron.schedule(`*/${minuteInterval} 8-16/${hourInterval}  * * 1-6`, async () => {
+// At every 10th minute past every hour from 8 through 10 on every day-of-week from Monday through Saturday.
+cron.schedule(`*/${minuteInterval} 8-10 * * 1-6`, async () => {
     const time = new Date();
     const formattedTime =
         time.getMonth() +
@@ -129,7 +129,7 @@ async function verifyChanges(
 
     // Determines if it is at the beginnning of the 4 hour interval (Otherwise get previous page)
     const hours =
-        time.getHours() / hourInterval == 2
+        time.getHours() / hourInterval == 8
             ? time.getHours()
             : time.getHours() - hourInterval;
 
