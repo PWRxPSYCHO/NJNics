@@ -25,8 +25,8 @@ client.once('shardReconnecting', (id) => {
 client.once('shardDisconnect', (event, shardID) => {
     console.log(`Disconnected from event ${event} with ID ${shardID}`);
 });
-// At every 10th minute past every hour from 8 through 10 on every day-of-week from Monday through Saturday.
-cron.schedule(`*/${minuteInterval} 8-10 * * 1-6`, async () => {
+// At every 10th minute past every hour from 8 through 10 on every day-of-week from Monday through Friday.
+cron.schedule(`*/${minuteInterval} 8-10 * * 1-5`, async () => {
     const time = new Date();
     const formattedTime =
         time.getMonth() +
@@ -117,7 +117,6 @@ async function embedMessage(
 }
 
 /**
- * @return {boolean} determines if queue has changed
  * @param {string} message NICS Queue message
  * @param {string} fetchedTime when the update was fetched
  */
