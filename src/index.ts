@@ -3,6 +3,7 @@ import * as env from 'dotenv';
 import cron from 'node-cron';
 import axios from 'axios';
 import * as fs from 'fs';
+import * as path from 'path';
 import JSDOM from 'jsdom';
 
 env.config();
@@ -24,6 +25,21 @@ client.once('shardReconnecting', (id) => {
 
 client.once('shardDisconnect', (event, shardID) => {
     console.log(`Disconnected from event ${event} with ID ${shardID}`);
+});
+
+cron.schedule('0 0 * * 1-5', async () => {
+    fs.readdir('queue', (err, files) => {
+        if (err) {
+            console.error(err);
+        }
+        for (const file of files) {
+            fs.unlink(path.join('queue/', file), (error) => {
+                if (error) {
+                    console.error(error);
+                }
+            });
+        }
+    });
 });
 // At every 10th minute past every hour from 8 through 10 on every day-of-week from Monday through Friday.
 cron.schedule(`*/${minuteInterval} 8-10 * * 1-5`, async () => {
