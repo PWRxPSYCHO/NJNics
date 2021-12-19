@@ -33,11 +33,13 @@ cron.schedule('0 0 * * 1-5', async () => {
             console.error(err);
         }
         for (const file of files) {
-            fs.unlink(path.join('queue/', file), (error) => {
-                if (error) {
-                    console.error(error);
-                }
-            });
+            if (file.endsWith('.html')) {
+                fs.unlink(path.join('queue/', file), (error) => {
+                    if (error) {
+                        console.error(error);
+                    }
+                });
+            }
         }
     });
 });
