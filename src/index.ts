@@ -11,6 +11,7 @@ env.config();
 const url = 'https://www.njportal.com/NJSP/NicsVerification';
 const minuteInterval = 10;
 const hourInterval = 1;
+let posted = false;
 const client = new Client({
     intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
 });
@@ -28,6 +29,7 @@ client.once('shardDisconnect', (event, shardID) => {
 });
 
 cron.schedule('0 0 * * 1-5', async () => {
+    posted = false;
     fs.readdir('queue', (err, files) => {
         if (err) {
             console.error(err);
@@ -144,17 +146,18 @@ async function verifyChanges(
 ): Promise<void> {
     const time = new Date();
 
-    // Determines if it is at the beginnning of the 4 hour interval (Otherwise get previous page)
-    const hours =
-        time.getHours() / hourInterval == 8
-            ? time.getHours()
-            : time.getHours() - hourInterval;
-
     // Determines if it is at the beginning of the 10 min interval (Otherwise get previous page)
-    const minutes =
+    let minutes =
         time.getMinutes() - minuteInterval >= 0
             ? time.getMinutes() - minuteInterval
             : time.getMinutes();
+
+    // Determines if it is at the beginnning of the hour (Otherwise get previous page)
+    let hours = time.getHours();
+    if (minutes === 0 && hours / hourInterval !== 8) {
+        hours = hours - 1;
+        minutes = 50;
+    }
 
     const formattedTime =
         time.getMonth() +
@@ -173,7 +176,7 @@ async function verifyChanges(
         { encoding: 'utf8' },
         (error, data) => {
             if (error) {
-                return console.error(error);
+                console.error(error);
             }
             const dom = new JSDOM.JSDOM(data);
             const msg = dom.window.document.querySelector('div.message-group');
@@ -184,8 +187,9 @@ async function verifyChanges(
                 } else {
                     embedMessage(message, process.env.WEBHOOKURL, fetchedTime);
                 }
-            } else if (message !== null) {
+            } else if (message != null && !posted) {
                 embedMessage(message, process.env.WEBHOOKURL, fetchedTime);
+                posted = true;
             }
         },
     );
