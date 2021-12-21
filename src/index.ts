@@ -11,6 +11,7 @@ env.config();
 const url = 'https://www.njportal.com/NJSP/NicsVerification';
 const minuteInterval = 10;
 const hourInterval = 1;
+const folderPath = process.env.FOLDER_PATH;
 let posted = false;
 const client = new Client({
     intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
@@ -36,7 +37,7 @@ cron.schedule('0 0 * * 1-5', async () => {
         }
         for (const file of files) {
             if (file.endsWith('.html')) {
-                fs.unlink(path.join('queue/', file), (error) => {
+                fs.unlink(path.join(folderPath, file), (error) => {
                     if (error) {
                         console.error(error);
                     }
@@ -72,7 +73,7 @@ cron.schedule(`*/${minuteInterval} 8-10 * * 1-5`, async () => {
     const request = await axios.get(url);
     await saveData(request.data, formattedTime);
     fs.readFile(
-        `queue/${formattedTime}-nics.html`,
+        `${folderPath}${formattedTime}-nics.html`,
         { encoding: 'utf8' },
         (error, data) => {
             if (error) {
@@ -97,7 +98,7 @@ cron.schedule(`*/${minuteInterval} 8-10 * * 1-5`, async () => {
  */
 async function saveData(data: string, time: string) {
     try {
-        fs.writeFile(`queue/${time}-nics.html`, data, { flag: 'w+' }, (err) => {
+        fs.writeFile(`${folderPath}${time}-nics.html`, data, { flag: 'w+' }, (err) => {
             if (err) {
                 console.error(err);
             }
@@ -175,7 +176,7 @@ async function verifyChanges(
     console.log(`posted: ${posted}`);
     console.log(`Message has val: ${message.length > 0}`);
     fs.readFile(
-        `queue/${formattedTime}-nics.html`,
+        `${folderPath}${formattedTime}-nics.html`,
         { encoding: 'utf8' },
         (error, data) => {
             if (error) {
