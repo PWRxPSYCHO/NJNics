@@ -171,6 +171,9 @@ async function verifyChanges(
         '-' +
         minutes;
 
+    console.log(`Formatted Time: ${formattedTime}`);
+    console.log(`posted: ${posted}`);
+    console.log(`Message has val: ${message.length > 0}`);
     fs.readFile(
         `queue/${formattedTime}-nics.html`,
         { encoding: 'utf8' },
@@ -182,12 +185,20 @@ async function verifyChanges(
             const msg = dom.window.document.querySelector('div.message-group');
             if (msg !== null) {
                 const nics = msg.innerHTML;
+                console.log(`msg has val: ${nics.length > 0}`);
+                if (!posted) {
+                    console.log('Posting Message');
+                    embedMessage(message, process.env.WEBHOOKURL, fetchedTime);
+                    posted = true;
+                }
                 if (nics === message) {
                     return;
                 } else {
+                    console.log('Posting Updated Message');
                     embedMessage(message, process.env.WEBHOOKURL, fetchedTime);
                 }
-            } else if (message != null && !posted) {
+            } else if (message !== null && !posted) {
+                console.log('Posting inital message');
                 embedMessage(message, process.env.WEBHOOKURL, fetchedTime);
                 posted = true;
             }
