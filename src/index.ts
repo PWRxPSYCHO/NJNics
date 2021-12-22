@@ -29,7 +29,7 @@ client.once('shardDisconnect', (event, shardID) => {
     console.log(`Disconnected from event ${event} with ID ${shardID}`);
 });
 
-cron.schedule('0 8-15/1 * * 1-5', async () => {
+cron.schedule('0 10,15 * * *', async () => {
     if (!posted) {
         const time = new Date();
         const timeMinute =
