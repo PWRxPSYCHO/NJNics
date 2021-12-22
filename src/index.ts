@@ -29,15 +29,33 @@ client.once('shardDisconnect', (event, shardID) => {
     console.log(`Disconnected from event ${event} with ID ${shardID}`);
 });
 
+cron.schedule('0 8-15/1 * * 1-5', async () => {
+    if (!posted) {
+        const time = new Date();
+        const timeMinute =
+            time.getMinutes() - 10 >= 0
+                ? time.getMinutes()
+                : '0' + time.getMinutes();
+        const amOrPm = time.getHours() >= 12 ? 'pm' : 'am';
+        const hours =
+            time.getHours() - 12 > 0 ? time.getHours() - 12 : time.getHours();
+        const fetchedTime = `${hours}:${timeMinute} ${amOrPm}`;
+
+        const message = time.getHours() === 15 ? 'No NICS update today' : 'No NICS update yet';
+
+        embedMessage(message, process.env.WEBHOOKURL, fetchedTime);
+    }
+});
 cron.schedule('0 0 * * 1-5', async () => {
     posted = false;
-    fs.readdir('queue', (err, files) => {
+    fs.readdir(folderPath, (err, files) => {
         if (err) {
             console.error(err);
         }
         for (const file of files) {
             if (file.endsWith('.html')) {
-                fs.unlink(path.join(folderPath, file), (error) => {
+                const sanitizedFile = file.replace(/\//g, '\\\\');
+                fs.unlink(path.join(folderPath, sanitizedFile), (error) => {
                     if (error) {
                         console.error(error);
                     }
@@ -47,7 +65,7 @@ cron.schedule('0 0 * * 1-5', async () => {
     });
 });
 // At every 10th minute past every hour from 8 through 10 on every day-of-week from Monday through Friday.
-cron.schedule(`*/${minuteInterval} 8-10 * * 1-5`, async () => {
+cron.schedule(`*/${minuteInterval} 8-15 * * 1-5`, async () => {
     const time = new Date();
     const formattedTime =
         time.getMonth() +
@@ -98,12 +116,17 @@ cron.schedule(`*/${minuteInterval} 8-10 * * 1-5`, async () => {
  */
 async function saveData(data: string, time: string) {
     try {
-        fs.writeFile(`${folderPath}${time}-nics.html`, data, { flag: 'w+' }, (err) => {
-            if (err) {
-                console.error(err);
-            }
-            console.log('file saved');
-        });
+        fs.writeFile(
+            `${folderPath}${time}-nics.html`,
+            data,
+            { flag: 'w+' },
+            (err) => {
+                if (err) {
+                    console.error(err);
+                }
+                console.log('file saved');
+            },
+        );
     } catch (error) {
         console.error(error);
     }
