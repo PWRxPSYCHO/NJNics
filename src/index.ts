@@ -41,7 +41,7 @@ cron.schedule('0 10,17 * * *', async () => {
             time.getHours() - 12 > 0 ? time.getHours() - 12 : time.getHours();
         const fetchedTime = `${hours}:${timeMinute} ${amOrPm}`;
 
-        const message = time.getHours() === 15 ? 'No NICS update today' : 'No NICS update yet';
+        const message = time.getHours() === 17 ? 'No NICS update today' : 'No NICS update yet';
 
         embedMessage(message, process.env.WEBHOOKURL, fetchedTime);
     }
