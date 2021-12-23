@@ -142,8 +142,6 @@ async function embedMessage(
     embed.setTitle('NJ NICS Queue');
     embed.setURL(url);
 
-    // const time = message.match('.*?[2][0][2][0-9]');
-
     embed.setDescription(message);
     embed.setFooter(`Fetched at: ${timeFetched}`);
     embed.setColor('#ffd81e');
@@ -165,36 +163,12 @@ async function verifyChanges(
 ): Promise<void> {
     const time = new Date();
 
-    // Determines if it is at the beginning of the 10 min interval (Otherwise get previous page)
-    let minutes =
-        time.getMinutes() - minuteInterval >= 0
-            ? time.getMinutes() - minuteInterval
-            : time.getMinutes();
 
-    // Determines if it is at the beginnning of the hour (Otherwise get previous page)
-    let hours = time.getHours();
-    if (minutes === 0 && hours / hourInterval !== 8) {
-        hours = hours - 1;
-        minutes = 50;
-    }
-
-    const formattedTime =
-        time.getMonth() +
-        1 +
-        '-' +
-        time.getDate() +
-        '-' +
-        time.getFullYear() +
-        '-' +
-        hours +
-        '-' +
-        minutes;
-
-    console.log(`Formatted Time: ${formattedTime}`);
+    console.log(`Formatted Time: ${getPrevTimeInterval(time)}`);
     console.log(`posted: ${posted}`);
     console.log(`Message has val: ${message.length > 0}`);
     fs.readFile(
-        `${folderPath}${formattedTime}-nics.html`,
+        `${folderPath}${getPrevTimeInterval(time)}-nics.html`,
         { encoding: 'utf8' },
         (error, data) => {
             if (error) {
@@ -228,12 +202,12 @@ async function verifyChanges(
 /**
  * Determines if today is a holiday
  * @return {boolean} if today is a holiday
- * @param {string[]} holidays List of holidays for the year
+ * @param {string[]} holidayList List of holidays for the year
  */
-function isHoliday(holidays: string[]): boolean {
+function isHoliday(holidayList: string[]): boolean {
     const time = new Date();
     const today = time.getMonth() + 1 + '/' + time.getDay();
-    const match = holidays.find((x) => x === today);
+    const match = holidayList.find((x) => x === today);
 
     return match != null ? true : false;
 }
@@ -252,6 +226,38 @@ function fetchedTime(time: Date): string {
     const hours =
         time.getHours() - 12 > 0 ? time.getHours() - 12 : time.getHours();
     return `${hours}:${timeMinute} ${amOrPm}`;
+}
+
+/**
+ * Accepts current date object and returns previous time interval
+ * @param {Date} time current date object
+ * @return {string} formatted date string
+ */
+function getPrevTimeInterval(time: Date): string {
+    // Determines if it is at the beginning of the 10 min interval (Otherwise get previous page)
+    let minutes =
+        time.getMinutes() - minuteInterval >= 0
+            ? time.getMinutes() - minuteInterval
+            : time.getMinutes();
+
+    // Determines if it is at the beginnning of the hour (Otherwise get previous page)
+    let hours = time.getHours();
+    if (minutes === 0 && hours / hourInterval !== 8) {
+        hours = hours - 1;
+        minutes = 50;
+    }
+    return (
+        time.getMonth() +
+        1 +
+        '-' +
+        time.getDate() +
+        '-' +
+        time.getFullYear() +
+        '-' +
+        hours +
+        '-' +
+        minutes);
+
 }
 
 const holidays = [
