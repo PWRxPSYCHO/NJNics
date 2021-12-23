@@ -65,6 +65,7 @@ cron.schedule('0 0 * * 1-5', async () => {
 cron.schedule(`*/${minuteInterval} 8-17 * * 1-5`, async () => {
     const time = new Date();
 
+    console.log(`Is today not a holiday: ${!isHoliday(holidays)}`);
     if (!isHoliday(holidays)) {
         const formattedTime =
             time.getMonth() +
@@ -98,7 +99,7 @@ cron.schedule(`*/${minuteInterval} 8-17 * * 1-5`, async () => {
             },
         );
     }
-    if (!posted && !isHoliday(holidays)) {
+    if (!posted && isHoliday(holidays)) {
         embedMessage(
             'Gov holiday no NICS today',
             process.env.WEBHOOKURL,
@@ -213,7 +214,7 @@ function isHoliday(holidayList: string[]): boolean {
     const today = time.getMonth() + 1 + '/' + date;
     const match = holidayList.find((x) => x === today);
 
-    return match !== undefined ? false : true;
+    return match === undefined ? false : true;
 }
 
 /**
