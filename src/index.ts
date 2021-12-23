@@ -29,6 +29,7 @@ client.once('shardDisconnect', (event, shardID) => {
     console.log(`Disconnected from event ${event} with ID ${shardID}`);
 });
 
+// at minute zero past hour 10 and 17 Mon-Fri
 cron.schedule('0 10,17 * * 1-5', async () => {
     const time = new Date();
     if (!posted && !isHoliday(holidays)) {
@@ -39,6 +40,8 @@ cron.schedule('0 10,17 * * 1-5', async () => {
         );
     }
 });
+
+// at minute 0 of hour 0 from Mon-Fri
 cron.schedule('0 0 * * 1-5', async () => {
     posted = false;
     fs.readdir(folderPath, (err, files) => {
@@ -57,8 +60,9 @@ cron.schedule('0 0 * * 1-5', async () => {
         }
     });
 });
-// At every 10th minute past every hour from 8 through 10 on every day-of-week from Monday through Friday.
-cron.schedule(`*/${minuteInterval} 8-15 * * 1-5`, async () => {
+
+// At every 10th minute past every hour from 8 through 17 on every day-of-week from Monday through Friday.
+cron.schedule(`*/${minuteInterval} 8-17 * * 1-5`, async () => {
     const time = new Date();
 
     if (!isHoliday(holidays)) {
@@ -89,14 +93,14 @@ cron.schedule(`*/${minuteInterval} 8-15 * * 1-5`, async () => {
 
                 if (message !== null) {
                     const msg = message.innerHTML;
-                    verifyChanges(msg, fetchedTime(time));
+                    verifyChanges(msg);
                 }
             },
         );
     }
-    if (!posted && isHoliday(holidays)) {
+    if (!posted && !isHoliday(holidays)) {
         embedMessage(
-            'Gov holiday. No NICS today',
+            'Gov holiday no NICS today',
             process.env.WEBHOOKURL,
             fetchedTime(time),
         );
@@ -159,7 +163,6 @@ async function embedMessage(
  */
 async function verifyChanges(
     message: string,
-    timeFetched: string,
 ): Promise<void> {
     const time = new Date();
 
@@ -181,18 +184,18 @@ async function verifyChanges(
                 console.log(`msg has val: ${nics.length > 0}`);
                 if (!posted) {
                     console.log('Posting Message');
-                    embedMessage(message, process.env.WEBHOOKURL, timeFetched);
+                    embedMessage(message, process.env.WEBHOOKURL, fetchedTime(time));
                     posted = true;
                 }
                 if (nics === message) {
                     return;
                 } else {
                     console.log('Posting Updated Message');
-                    embedMessage(message, process.env.WEBHOOKURL, timeFetched);
+                    embedMessage(message, process.env.WEBHOOKURL, fetchedTime(time));
                 }
             } else if (message !== null && !posted) {
                 console.log('Posting inital message');
-                embedMessage(message, process.env.WEBHOOKURL, timeFetched);
+                embedMessage(message, process.env.WEBHOOKURL, fetchedTime(time));
                 posted = true;
             }
         },
@@ -206,10 +209,11 @@ async function verifyChanges(
  */
 function isHoliday(holidayList: string[]): boolean {
     const time = new Date();
-    const today = time.getMonth() + 1 + '/' + time.getDay();
+    const date = time.getDate() < 10 ? '0' + time.getDate() : time.getDate();
+    const today = time.getMonth() + 1 + '/' + date;
     const match = holidayList.find((x) => x === today);
 
-    return match != null ? true : false;
+    return match !== undefined ? false : true;
 }
 
 /**
