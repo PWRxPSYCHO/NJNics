@@ -30,20 +30,13 @@ client.once('shardDisconnect', (event, shardID) => {
 });
 
 cron.schedule('0 8-15/1 * * 1-5', async () => {
-    if (!posted) {
-        const time = new Date();
-        const timeMinute =
-            time.getMinutes() - 10 >= 0
-                ? time.getMinutes()
-                : '0' + time.getMinutes();
-        const amOrPm = time.getHours() >= 12 ? 'pm' : 'am';
-        const hours =
-            time.getHours() - 12 > 0 ? time.getHours() - 12 : time.getHours();
-        const fetchedTime = `${hours}:${timeMinute} ${amOrPm}`;
-
-        const message = time.getHours() === 15 ? 'No NICS update today' : 'No NICS update yet';
-
-        embedMessage(message, process.env.WEBHOOKURL, fetchedTime);
+    const time = new Date();
+    if (!posted && !isHoliday(holidays)) {
+        embedMessage(
+            'No NICS update at this time',
+            process.env.WEBHOOKURL,
+            fetchedTime(time),
+        );
     }
 });
 cron.schedule('0 0 * * 1-5', async () => {
@@ -67,46 +60,48 @@ cron.schedule('0 0 * * 1-5', async () => {
 // At every 10th minute past every hour from 8 through 10 on every day-of-week from Monday through Friday.
 cron.schedule(`*/${minuteInterval} 8-15 * * 1-5`, async () => {
     const time = new Date();
-    const formattedTime =
-        time.getMonth() +
-        1 +
-        '-' +
-        time.getDate() +
-        '-' +
-        time.getFullYear() +
-        '-' +
-        time.getHours() +
-        '-' +
-        time.getMinutes();
 
-    const timeMinute =
-        time.getMinutes() - 10 >= 0
-            ? time.getMinutes()
-            : '0' + time.getMinutes();
-    const amOrPm = time.getHours() >= 12 ? 'pm' : 'am';
-    const hours =
-        time.getHours() - 12 > 0 ? time.getHours() - 12 : time.getHours();
-    const fetchedTime = `${hours}:${timeMinute} ${amOrPm}`;
+    if (!isHoliday(holidays)) {
+        const formattedTime =
+            time.getMonth() +
+            1 +
+            '-' +
+            time.getDate() +
+            '-' +
+            time.getFullYear() +
+            '-' +
+            time.getHours() +
+            '-' +
+            time.getMinutes();
 
-    const request = await axios.get(url);
-    await saveData(request.data, formattedTime);
-    fs.readFile(
-        `${folderPath}${formattedTime}-nics.html`,
-        { encoding: 'utf8' },
-        (error, data) => {
-            if (error) {
-                return console.error(error);
-            }
-            const dom = new JSDOM.JSDOM(data);
-            const message =
-                dom.window.document.querySelector('div.message-group');
+        const request = await axios.get(url);
+        await saveData(request.data, formattedTime);
+        fs.readFile(
+            `${folderPath}${formattedTime}-nics.html`,
+            { encoding: 'utf8' },
+            (error, data) => {
+                if (error) {
+                    return console.error(error);
+                }
+                const dom = new JSDOM.JSDOM(data);
+                const message =
+                    dom.window.document.querySelector('div.message-group');
 
-            if (message !== null) {
-                const msg = message.innerHTML;
-                verifyChanges(msg, fetchedTime);
-            }
-        },
-    );
+                if (message !== null) {
+                    const msg = message.innerHTML;
+                    verifyChanges(msg, fetchedTime(time));
+                }
+            },
+        );
+    }
+    if (!posted && isHoliday(holidays)) {
+        embedMessage(
+            'Gov holiday. No NICS today',
+            process.env.WEBHOOKURL,
+            fetchedTime(time),
+        );
+        posted = true;
+    }
 });
 
 /**
@@ -136,12 +131,12 @@ async function saveData(data: string, time: string) {
  * Sends embedded message to channel
  * @param {string} message message to post to channel
  * @param {string} webHookURL webhook url
- * @param {string} fetchedTime time when data was fetched
+ * @param {string} timeFetched time when data was fetched
  */
 async function embedMessage(
     message: string,
     webHookURL: string,
-    fetchedTime: string,
+    timeFetched: string,
 ) {
     const embed = new MessageEmbed();
     embed.setTitle('NJ NICS Queue');
@@ -150,7 +145,7 @@ async function embedMessage(
     // const time = message.match('.*?[2][0][2][0-9]');
 
     embed.setDescription(message);
-    embed.setFooter(`Fetched at: ${fetchedTime}`);
+    embed.setFooter(`Fetched at: ${timeFetched}`);
     embed.setColor('#ffd81e');
 
     const body = {
@@ -162,11 +157,11 @@ async function embedMessage(
 
 /**
  * @param {string} message NICS Queue message
- * @param {string} fetchedTime when the update was fetched
+ * @param {string} timeFetched when the update was fetched
  */
 async function verifyChanges(
     message: string,
-    fetchedTime: string,
+    timeFetched: string,
 ): Promise<void> {
     const time = new Date();
 
@@ -212,22 +207,68 @@ async function verifyChanges(
                 console.log(`msg has val: ${nics.length > 0}`);
                 if (!posted) {
                     console.log('Posting Message');
-                    embedMessage(message, process.env.WEBHOOKURL, fetchedTime);
+                    embedMessage(message, process.env.WEBHOOKURL, timeFetched);
                     posted = true;
                 }
                 if (nics === message) {
                     return;
                 } else {
                     console.log('Posting Updated Message');
-                    embedMessage(message, process.env.WEBHOOKURL, fetchedTime);
+                    embedMessage(message, process.env.WEBHOOKURL, timeFetched);
                 }
             } else if (message !== null && !posted) {
                 console.log('Posting inital message');
-                embedMessage(message, process.env.WEBHOOKURL, fetchedTime);
+                embedMessage(message, process.env.WEBHOOKURL, timeFetched);
                 posted = true;
             }
         },
     );
 }
+
+/**
+ * Determines if today is a holiday
+ * @return {boolean} if today is a holiday
+ * @param {string[]} holidays List of holidays for the year
+ */
+function isHoliday(holidays: string[]): boolean {
+    const time = new Date();
+    const today = time.getMonth() + 1 + '/' + time.getDay();
+    const match = holidays.find((x) => x === today);
+
+    return match != null ? true : false;
+}
+
+/**
+ * Formats date and returns string
+ * @param {date} time current date object
+ * @return {string} fetchedTime in string format (12hr am/pm)
+ */
+function fetchedTime(time: Date): string {
+    const timeMinute =
+        time.getMinutes() - 10 >= 0
+            ? time.getMinutes()
+            : '0' + time.getMinutes();
+    const amOrPm = time.getHours() >= 12 ? 'pm' : 'am';
+    const hours =
+        time.getHours() - 12 > 0 ? time.getHours() - 12 : time.getHours();
+    return `${hours}:${timeMinute} ${amOrPm}`;
+}
+
+const holidays = [
+    '01/01',
+    '01/18',
+    '02/15',
+    '04/02',
+    '05/31',
+    '06/18',
+    '07/05',
+    '09/06',
+    '10/11',
+    '11/02',
+    '11/11',
+    '11/25',
+    '12/24',
+    '12/31',
+];
 
 client.login(process.env.DISCORD_TOKEN);
