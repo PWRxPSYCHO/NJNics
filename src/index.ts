@@ -30,7 +30,7 @@ client.once('shardDisconnect', (event, shardID) => {
 });
 
 // at minute zero past hour 10 and 17 Mon-Fri
-cron.schedule('0 10,17 * * 1-5', async () => {
+cron.schedule('0 12,17 * * 1-5', async () => {
     const time = new Date();
     if (!posted && !isHoliday(holidays)) {
         embedMessage(
