@@ -1,4 +1,4 @@
-import { Client, Intents, MessageEmbed } from 'discord.js';
+import { Client, EmbedFooterData, Intents, MessageEmbed } from 'discord.js';
 import * as env from 'dotenv';
 import cron from 'node-cron';
 import axios from 'axios';
@@ -137,7 +137,7 @@ async function embedMessage(
     embed.setURL(url);
 
     embed.setDescription(message);
-    embed.setFooter(`Fetched at: ${timeFetched}`);
+    embed.setFooter({ text: `Fetched at: ${timeFetched}` } as EmbedFooterData);
     embed.setColor('#ffd81e');
 
     const body = {
