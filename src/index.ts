@@ -29,17 +29,6 @@ client.once('shardDisconnect', (event, shardID) => {
     console.log(`Disconnected from event ${event} with ID ${shardID}`);
 });
 
-// at minute zero past hour 10 and 17 Mon-Fri
-cron.schedule('0 12,17 * * 1-5', async () => {
-    const time = new Date();
-    if (!posted && !isHoliday(holidays)) {
-        embedMessage(
-            'No NICS update at this time',
-            process.env.WEBHOOKURL,
-            fetchedTime(time),
-        );
-    }
-});
 
 // at minute 0 of hour 0 from Mon-Fri
 cron.schedule('0 0 * * 1-5', async () => {
@@ -160,7 +149,6 @@ async function embedMessage(
 
 /**
  * @param {string} message NICS Queue message
- * @param {string} timeFetched when the update was fetched
  */
 async function verifyChanges(
     message: string,
