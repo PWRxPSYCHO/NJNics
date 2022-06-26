@@ -18,7 +18,7 @@
   },
   "homepage": "https://github.com/PWRxPSYCHO/NJNics#readme",
   "dependencies": {
-    "@discordjs/builders": "^0.13.0",
+    "@discordjs/builders": "^0.14.0",
     "@discordjs/rest": "^0.4.1",
     "@types/jsdom": "^16.2.14",
     "axios": "^0.27.2",
