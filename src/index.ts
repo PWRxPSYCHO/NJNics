@@ -1,10 +1,11 @@
-import { Client, EmbedFooterData, Intents, MessageEmbed } from 'discord.js';
+import { Client, Colors, EmbedFooterOptions } from 'discord.js';
 import * as env from 'dotenv';
 import cron from 'node-cron';
 import axios from 'axios';
 import * as fs from 'fs';
 import * as path from 'path';
 import JSDOM from 'jsdom';
+import { EmbedBuilder } from '@discordjs/builders';
 
 env.config();
 
@@ -14,7 +15,7 @@ const hourInterval = 1;
 const folderPath = process.env.FOLDER_PATH;
 let posted = false;
 const client = new Client({
-    intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
+    intents: [],
 });
 
 client.once('ready', async () => {
@@ -92,7 +93,7 @@ cron.schedule(`*/${minuteInterval} 8-17 * * 1-5`, async () => {
         embedMessage(
             'Gov holiday no NICS today',
             process.env.WEBHOOKURL,
-            fetchedTime(time),
+            time,
         );
         posted = true;
     }
@@ -125,20 +126,20 @@ async function saveData(data: string, time: string) {
  * Sends embedded message to channel
  * @param {string} message message to post to channel
  * @param {string} webHookURL webhook url
- * @param {string} timeFetched time when data was fetched
+ * @param {Date} timeFetched time when data was fetched
  */
 async function embedMessage(
     message: string,
     webHookURL: string,
-    timeFetched: string,
+    timeFetched: Date,
 ) {
-    const embed = new MessageEmbed();
+    const embed = new EmbedBuilder();
     embed.setTitle('NJ NICS Queue');
     embed.setURL(url);
 
     embed.setDescription(message);
-    embed.setFooter({ text: `Fetched at: ${timeFetched}` } as EmbedFooterData);
-    embed.setColor('#ffd81e');
+    embed.setFooter({ text: timeFetched.toISOString() } as EmbedFooterOptions);
+    embed.setColor(Colors.Yellow);
 
     const body = {
         content: '',
@@ -173,18 +174,18 @@ async function verifyChanges(
                 console.log(`msg has val: ${nics.length > 0}`);
                 if (!posted) {
                     console.log('Posting Message');
-                    embedMessage(message, process.env.WEBHOOKURL, fetchedTime(time));
+                    embedMessage(message, process.env.WEBHOOKURL, time);
                     posted = true;
                 }
                 if (nics === message) {
                     return;
                 } else {
                     console.log('Posting Updated Message');
-                    embedMessage(message, process.env.WEBHOOKURL, fetchedTime(time));
+                    embedMessage(message, process.env.WEBHOOKURL, time);
                 }
             } else if (message !== null && !posted) {
                 console.log('Posting inital message');
-                embedMessage(message, process.env.WEBHOOKURL, fetchedTime(time));
+                embedMessage(message, process.env.WEBHOOKURL, time);
                 posted = true;
             }
         },
@@ -203,22 +204,6 @@ function isHoliday(holidayList: string[]): boolean {
     const match = holidayList.find((x) => x === today);
 
     return match === undefined ? false : true;
-}
-
-/**
- * Formats date and returns string
- * @param {date} time current date object
- * @return {string} fetchedTime in string format (12hr am/pm)
- */
-function fetchedTime(time: Date): string {
-    const timeMinute =
-        time.getMinutes() - 10 >= 0
-            ? time.getMinutes()
-            : '0' + time.getMinutes();
-    const amOrPm = time.getHours() >= 12 ? 'pm' : 'am';
-    const hours =
-        time.getHours() - 12 > 0 ? time.getHours() - 12 : time.getHours();
-    return `${hours}:${timeMinute} ${amOrPm}`;
 }
 
 /**
