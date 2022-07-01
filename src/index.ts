@@ -1,11 +1,11 @@
-import { Client, Colors, EmbedFooterOptions } from 'discord.js';
+import { Client, EmbedFooterOptions } from 'discord.js';
 import * as env from 'dotenv';
 import cron from 'node-cron';
 import axios from 'axios';
 import * as fs from 'fs';
 import * as path from 'path';
 import JSDOM from 'jsdom';
-import { EmbedBuilder } from '@discordjs/builders';
+import { EmbedBuilder, RGBTuple } from '@discordjs/builders';
 
 env.config();
 
@@ -139,7 +139,7 @@ async function embedMessage(
 
     embed.setDescription(message);
     embed.setFooter({ text: timeFetched.toISOString() } as EmbedFooterOptions);
-    embed.setColor(Colors.Yellow);
+    embed.setColor({ '0': 255, '1': 216, '2': 30 } as RGBTuple);
 
     const body = {
         content: '',
